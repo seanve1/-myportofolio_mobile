@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:myportofolio_mobile/main.dart';
-import 'package:myportofolio_mobile/menu.dart';
+import 'package:myportofolio_mobile/widgets/project_card.dart';
 
 void main() {
   testWidgets('Profile information and action cards are displayed', (

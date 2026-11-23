@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:myportofolio_mobile/screens/project_form.dart';
 
 // Model untuk data menu --> name, icon, dan color.
 class ItemHomepage {
   final String name;
   final IconData icon;
   final Color color;
+  final VoidCallback? onTap;
 
-  const ItemHomepage(this.name, this.icon, this.color);
+  const ItemHomepage(this.name, this.icon, this.color, {this.onTap});
 }
 
 class ItemCard extends StatelessWidget {
@@ -37,12 +37,8 @@ class ItemCard extends StatelessWidget {
                 duration: const Duration(seconds: 2),
               ),
             );
-          if (item.name == 'Tambah Proyek') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ProjectFormPage()),
-            );
-          }
+          // Navigasi ditentukan oleh halaman pemilik kartu melalui callback.
+          item.onTap?.call();
         },
         child: Container(
           padding: const EdgeInsets.all(8),

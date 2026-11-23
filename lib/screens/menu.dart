@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:myportofolio_mobile/screens/experience_form.dart';
+import 'package:myportofolio_mobile/screens/project_form.dart';
 import 'package:myportofolio_mobile/widgets/left_drawer.dart';
 import 'package:myportofolio_mobile/widgets/project_card.dart';
 
@@ -9,15 +11,44 @@ class MyHomePage extends StatelessWidget {
   final String nama = "Jotham Seanvedi Takin Allo";
   final String kelas = "PBP F";
 
-  // List menu action; masing-masing item punya label, icon, dan color sendiri.
-  final List<ItemHomepage> items = const [
-    ItemHomepage("Lihat Proyek", Icons.folder, Colors.blue),
-    ItemHomepage("Tambah Proyek", Icons.add_circle, Colors.green),
-    ItemHomepage("Logout", Icons.logout, Colors.deepOrange),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    // Callback menjaga ItemCard tetap fokus pada tampilan dan interaksi.
+    final items = <ItemHomepage>[
+      const ItemHomepage("Lihat Proyek", Icons.folder, Colors.blue),
+      ItemHomepage(
+        "Tambah Proyek",
+        Icons.add_circle,
+        Colors.green,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ProjectFormPage()),
+          );
+        },
+      ),
+      ItemHomepage(
+        "Tambah Pengalaman",
+        Icons.work_history,
+        Colors.purple,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ExperienceFormPage()),
+          );
+        },
+      ),
+      const ItemHomepage("Logout", Icons.logout, Colors.deepOrange),
+    ];
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = screenWidth < 900 ? 2 : 4;
+    final cardAspectRatio = screenWidth < 600
+        ? 1.2
+        : screenWidth < 900
+        ? 1.4
+        : 1.5;
+
     // Scaffold menjadi kerangka utama halaman (AppBar, body, dan SnackBar).
     return Scaffold(
       appBar: AppBar(
@@ -60,7 +91,7 @@ class MyHomePage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // GridView untuk menu action. 2 kolom di mobile, 3 kolom di layar lebar.
+                  // GridView menyesuaikan jumlah kolom dengan lebar layar.
                   GridView.count(
                     // Scroll utama ditangani parent ListView, jadi GridView tidak scroll sendiri.
                     primary: false,
@@ -68,13 +99,9 @@ class MyHomePage extends StatelessWidget {
                     padding: const EdgeInsets.all(20),
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
-                    crossAxisCount: MediaQuery.of(context).size.width < 600
-                        ? 2
-                        : 3,
-                    // Aspect ratio card disesuaikan supaya icon dan label tetap muat.
-                    childAspectRatio: MediaQuery.of(context).size.width < 600
-                        ? 1.2
-                        : 1.6,
+                    crossAxisCount: crossAxisCount,
+                    // 4 kartu tetap seimbang pada desktop dan dua kolom di mobile.
+                    childAspectRatio: cardAspectRatio,
                     shrinkWrap: true,
                     children: items.map((ItemHomepage item) {
                       return ItemCard(item);

@@ -22,9 +22,10 @@ void main() {
     expect(find.text('Jotham Seanvedi Takin Allo'), findsOneWidget);
     expect(find.text('PBP F'), findsOneWidget);
 
-    // Ketiga action card harus tersedia.
+    // Keempat action card harus tersedia.
     expect(find.text('Lihat Proyek'), findsOneWidget);
     expect(find.text('Tambah Proyek'), findsOneWidget);
+    expect(find.text('Tambah Pengalaman'), findsOneWidget);
     expect(find.text('Logout'), findsOneWidget);
   });
 
@@ -36,14 +37,20 @@ void main() {
     // Warna diambil dari model ItemHomepage, bukan hardcoded di ItemCard.
     final cards = tester.widgetList<ItemCard>(find.byType(ItemCard)).toList();
 
-    expect(cards.length, 3);
+    expect(cards.length, 4);
     expect(cards[0].item.color, Colors.blue);
     expect(cards[1].item.color, Colors.green);
-    expect(cards[2].item.color, Colors.deepOrange);
-    expect(cards.map((card) => card.item.color).toSet().length, 3);
+    expect(cards[2].item.color, Colors.purple);
+    expect(cards[3].item.color, Colors.deepOrange);
+    expect(cards.map((card) => card.item.color).toSet().length, 4);
   });
 
-  for (final name in ['Lihat Proyek', 'Tambah Proyek', 'Logout']) {
+  for (final name in [
+    'Lihat Proyek',
+    'Tambah Proyek',
+    'Tambah Pengalaman',
+    'Logout',
+  ]) {
     testWidgets('SnackBar appears when $name is tapped', (
       WidgetTester tester,
     ) async {
@@ -51,7 +58,14 @@ void main() {
 
       // Tap action card lalu cek pesan SnackBar sesuai nama tombol.
       final button = find.text(name);
-      await tester.ensureVisible(button);
+      // Kartu di baris kedua dapat berada di bawah viewport widget test.
+      // Scroll pada ListView utama, lalu tunggu layout selesai sebelum tap.
+      await tester.scrollUntilVisible(
+        button,
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(button);
       await tester.pump();
 

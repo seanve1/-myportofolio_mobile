@@ -79,3 +79,55 @@ Berikut merupakan beberapa pertanyaan atau arahan yang saya gunakan kepada AI se
 Salah satu hal yang saya pelajari dari penggunaan AI adalah bahwa saran perubahan kode tidak selalu perlu diterapkan seluruhnya. Beberapa perubahan pada awalnya terlalu banyak mengubah struktur dan gaya kode yang sudah saya gunakan dari Tutorial 08. Oleh karena itu, saya melakukan penyesuaian kembali agar implementasi tetap sesuai dengan struktur sebelumnya, sambil mempertahankan perubahan yang memang dibutuhkan untuk meningkatkan responsivitas dan interaksi aplikasi.
 
 Selain itu, saya juga memahami bahwa hasil `flutter analyze` yang bersih belum tentu menjamin tampilan aplikasi sudah sesuai pada semua ukuran layar. Karena itu, pengujian melalui Chrome dan widget tests tetap diperlukan untuk memastikan komponen serta interaksi bekerja sesuai kebutuhan.
+
+### Tugas 8
+
+Pada Individual Assignment 8, saya mengembangkan halaman **Tambah Pengalaman** dengan menerapkan materi navigasi, layout, form, dan validasi Flutter. Fitur ini menggunakan referensi dari model `Organization` pada portofolio Django sebelumnya, yang awalnya bernama `Experience`. Form menyediakan posisi/jabatan dan nama organisasi sebagai data wajib, serta deskripsi, URL logo, dan tanggal sebagai informasi tambahan. Saya juga menambahkan kartu aksi berwarna ungu di homepage, opsi Add Experience pada Drawer, indikator kelengkapan input, toggle untuk pengalaman yang masih berlangsung, pemilih tanggal, dan validasi urutan tanggal. Setelah validasi berhasil, data ditampilkan melalui `AlertDialog` dan belum dikirim ke database.
+
+**1. Jelaskan perbedaan antara `Navigator.push()`, `Navigator.pushReplacement()`, dan `Navigator.pop()`. Metode apa yang digunakan untuk membuka formulir dari kartu aksi? Bagaimana opsi Home pada Drawer bekerja?**
+
+`Navigator.push()` menambahkan halaman baru di atas navigation stack sehingga halaman sebelumnya tetap ada dan dapat dibuka kembali menggunakan tombol Back. `Navigator.pushReplacement()` mengganti halaman saat ini dengan halaman tujuan, sehingga halaman yang diganti tidak lagi menjadi route tepat sebelumnya. Sementara itu, `Navigator.pop()` menutup route paling atas dan menampilkan route sebelumnya.
+
+Pada `menu.dart`, kartu **Tambah Pengalaman** menggunakan `Navigator.push()` untuk membuka `ExperienceFormPage`. Pengguna dapat kembali ke homepage melalui tombol Back pada perangkat atau AppBar sesuai platform. Pada `left_drawer.dart`, opsi **Home** menggunakan `Navigator.pushReplacement()` menuju `MyHomePage`, termasuk saat dipilih dari Experience Form. Drawer yang sama juga memiliki Add Project dan Add Experience, sehingga navigasi konsisten tanpa perlu membuat menu terpisah untuk setiap halaman.
+
+**2. Bagaimana `Scaffold`, `AppBar`, dan `Drawer` membantu menjaga struktur halaman? Berikan contoh konsistensi tema.**
+
+`Scaffold` membentuk struktur halaman dengan menyediakan tempat untuk `AppBar`, `Drawer`, dan `body`. `AppBar` menampilkan judul dan kendali navigasi yang konsisten, sedangkan `Drawer` menyediakan akses ke halaman utama dan kedua formulir. Karena saya memakai reusable `LeftDrawer` pada lebih dari satu halaman, perubahan navigasi cukup dilakukan pada satu komponen.
+
+Untuk konsistensi visual, halaman utama, Project Form, dan Experience Form menggunakan warna utama dari `Theme.of(context).colorScheme.primary` pada `AppBar` serta teks/ikon putih. Experience Form menggunakan aksen indigo pada tombol Simpan dan informasi ringkasan agar selaras dengan identitas warna portofolio.
+
+**3. Mengapa tata letak tersebut dipilih? Apa peran widget jarak dan widget penggulir pada layar terbatas?**
+
+Experience Form disusun secara vertikal agar pengguna dapat mengisi informasi dari atas ke bawah. `SingleChildScrollView` membolehkan formulir digulir sehingga kolom-kolom di bawah, termasuk tombol Simpan, masih dapat dijangkau pada layar kecil atau ketika keyboard tampil. `Center` dan `ConstrainedBox(maxWidth: 680)` menjaga lebar konten agar tidak terlalu melebar pada desktop, sedangkan `Padding` dan `SizedBox` membuat jarak yang konsisten antarinput.
+
+Saya juga menggunakan `Column` agar input tersusun rapi, serta `Expanded` pada label indikator kelengkapan agar teks tidak memaksa `Row` melewati lebar layar. Penyesuaian ini relevan karena pengujian awal pada viewport 360px sempat menemukan `RenderFlex overflow`, yang kemudian ditangani sebelum pengujian diulang.
+
+**4. Apa peran `GlobalKey<FormState>`, `validator`, dan `validate()`? Berikan contoh isian yang ditolak dan jelaskan mengapa jenis keyboard saja belum cukup.**
+
+`GlobalKey<FormState>` memberikan akses ke state dari semua field di dalam `Form`. Ketika tombol **Simpan Experience** ditekan, kode memanggil `_formKey.currentState!.validate()`. Flutter kemudian menjalankan fungsi `validator` pada masing-masing field; jika ada validator yang mengembalikan pesan kesalahan, dialog tidak akan ditampilkan.
+
+Contohnya, posisi/jabatan berisi tiga spasi (`"   "`) akan ditolak karena setelah `trim()` nilainya kosong. Nama organisasi juga wajib diisi dan maksimal 255 karakter. URL logo yang diisi harus berupa URL HTTP(S) yang valid. Jika toggle *masih berlangsung* dimatikan, tanggal selesai harus dipilih dan tidak boleh mendahului tanggal mulai ketika keduanya tersedia. Mengatur `keyboardType: TextInputType.url` hanya memberi saran jenis keyboard kepada pengguna, bukan mencegah input salah, apalagi input hasil paste; karena itu validasi program tetap diperlukan.
+
+#### AI Disclosure — Tugas 8
+
+**Alat yang digunakan:** ChatGPT.
+
+Saya menggunakan AI untuk mendiskusikan konsep navigasi, form, dan validasi Flutter, mencocokkan field aplikasi dengan model Django yang sudah ada, serta membantu menyusun kode, pengujian widget, dan patch perbaikan. Saya memilih Experience sebagai bagian portofolio yang dikembangkan dan menggunakan proyek Tugas 7 serta Tutorial 09 sebagai dasar, sehingga fitur lama tidak dibuat ulang. Perubahan yang disarankan diterapkan ke repository lokal lalu diperiksa dengan `dart format`, `flutter analyze`, `flutter test`, dan peninjauan tampilan aplikasi.
+
+**Ringkasan tanya-jawab pendampingan AI**  
+
+1. **Pertanyaan:** Apa perbedaan `Navigator.push()`, `pushReplacement()`, dan `pop()` dalam aplikasi dengan Drawer?  
+   **Ringkasan jawaban:** `push()` membuka route baru tanpa menghapus halaman sebelumnya; `pushReplacement()` mengganti route aktif dengan tujuan; `pop()` menutup route teratas. Dalam tugas ini, kartu homepage menggunakan `push()`, sedangkan menu Home pada Drawer memakai `pushReplacement()`.
+
+2. **Pertanyaan:** Mengapa `GlobalKey<FormState>` dan `validate()` diperlukan walaupun input sudah memakai jenis keyboard yang sesuai?  
+   **Ringkasan jawaban:** Jenis keyboard hanya memudahkan pengetikan, sedangkan `validator` memastikan data mematuhi aturan, termasuk input kosong setelah `trim()`, panjang teks, format URL, dan hubungan antar tanggal.
+
+3. **Pertanyaan:** Bagaimana menyelaraskan Experience Form Flutter dengan portofolio Django yang sudah dikerjakan?  
+   **Ringkasan jawaban:** Periksa `models.py`, `forms.py`, dan migrasi. Pada proyek ini model awal `Experience` telah berubah nama menjadi `Organization`. Field `title`, `category`, deskripsi, URL logo, dan tanggalnya menjadi acuan Flutter; tidak perlu membuat model Django baru untuk Tugas 8.
+
+4. **Pertanyaan:** Mengapa `flutter analyze` dapat lulus tetapi widget test masih gagal akibat `RenderFlex overflow`?  
+   **Ringkasan jawaban:** Analisis statis tidak menjalankan layout dalam ukuran layar tertentu. Overflow muncul ketika widget benar-benar dirender pada viewport sempit. Solusinya memperbaiki constraints atau susunan widget, lalu menjalankan tes ulang.
+
+5. **Pertanyaan:** Mengapa tes tap kartu bisa gagal padahal kartu ditemukan oleh `find.text()`?  
+   **Ringkasan jawaban:** Finder dapat menemukan widget di dalam tree meskipun koordinatnya berada di luar area layar. Tes harus melakukan scroll atau `ensureVisible` sampai target bisa menerima gesture sebelum `tap()` dijalankan.
+

@@ -3,6 +3,11 @@ import 'package:myportofolio_mobile/screens/experience_form.dart';
 import 'package:myportofolio_mobile/screens/project_form.dart';
 import 'package:myportofolio_mobile/widgets/left_drawer.dart';
 import 'package:myportofolio_mobile/widgets/project_card.dart';
+import 'package:myportofolio_mobile/screens/organization_list_screen.dart';
+import 'package:myportofolio_mobile/screens/login_screen.dart';
+import 'package:myportofolio_mobile/services/auth_state.dart';
+import 'package:myportofolio_mobile/widgets/auth_guard.dart';
+import 'package:provider/provider.dart';
 
 class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key});
@@ -14,13 +19,26 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Callback menjaga ItemCard tetap fokus pada tampilan dan interaksi.
+    final isLoggedIn = context.watch<AuthState>().isLoggedIn;
     final items = <ItemHomepage>[
-      const ItemHomepage("Lihat Proyek", Icons.folder, Colors.blue),
+      ItemHomepage(
+        "Lihat Pengalaman",
+        Icons.work_history,
+        Colors.blue,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const OrganizationListScreen()),
+          );
+        },
+      ),
       ItemHomepage(
         "Tambah Proyek",
         Icons.add_circle,
         Colors.green,
-        onTap: () {
+        onTap: () async {
+          final allowed = await ensureLoggedIn(context);
+          if (!context.mounted || !allowed) return;
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ProjectFormPage()),
@@ -31,14 +49,48 @@ class MyHomePage extends StatelessWidget {
         "Tambah Pengalaman",
         Icons.work_history,
         Colors.purple,
-        onTap: () {
+        onTap: () async {
+          final allowed = await ensureLoggedIn(context);
+          if (!context.mounted || !allowed) return;
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ExperienceFormPage()),
           );
         },
       ),
-      const ItemHomepage("Logout", Icons.logout, Colors.deepOrange),
+      ItemHomepage(
+        isLoggedIn ? "Logout" : "Login",
+        isLoggedIn ? Icons.logout : Icons.login,
+        Colors.deepOrange,
+        onTap: () async {
+          if (!isLoggedIn) {
+            await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            );
+            return;
+          }
+
+          // Jika sudah login, lakukan logout.
+          final authState = context.read<AuthState>();
+          try {
+            await authState.logout();
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Sesi login telah diakhiri.')),
+            );
+          } catch (error) {
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Sesi lokal telah diakhiri, tetapi logout server gagal.',
+                ),
+              ),
+            );
+          }
+        },
+      ),
     ];
 
     final screenWidth = MediaQuery.of(context).size.width;

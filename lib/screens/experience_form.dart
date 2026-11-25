@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:myportofolio_mobile/models/organization.dart';
+import 'package:myportofolio_mobile/screens/organization_list_screen.dart';
+import 'package:myportofolio_mobile/services/api_client.dart';
+import 'package:myportofolio_mobile/services/auth_state.dart';
+import 'package:myportofolio_mobile/widgets/auth_guard.dart';
 import 'package:myportofolio_mobile/widgets/left_drawer.dart';
+import 'package:provider/provider.dart';
 
 class ExperienceFormPage extends StatefulWidget {
   const ExperienceFormPage({super.key});
@@ -25,6 +31,7 @@ class _ExperienceFormPageState extends State<ExperienceFormPage> {
 
   // ended_at == null berarti pengalaman masih berlangsung pada model Django.
   bool _isOngoing = true;
+  bool _isSubmitting = false;
 
   int get _completedRequiredFields {
     final titleComplete = _titleController.text.trim().isNotEmpty;
@@ -162,65 +169,131 @@ class _ExperienceFormPageState extends State<ExperienceFormPage> {
     );
   }
 
-  void _saveExperience() {
-    if (!_formKey.currentState!.validate()) return;
+  String? _optionalText(TextEditingController controller) {
+    final value = controller.text.trim();
+    return value.isEmpty ? null : value;
+  }
 
-    final period = _isOngoing
-        ? '${_formatDate(_startedAt)} – Sekarang'
-        : '${_formatDate(_startedAt)} – ${_formatDate(_endedAt)}';
+  Future<void> _saveExperience() async {
+    if (_isSubmitting || !_formKey.currentState!.validate()) return;
 
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.work_history_outlined, color: Colors.indigo),
-            SizedBox(width: 8),
-            Expanded(child: Text('Ringkasan Experience')),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSummaryItem('Posisi', _titleController.text.trim()),
-                _buildSummaryItem(
-                  'Organisasi',
-                  _organizationController.text.trim(),
-                ),
-                _buildSummaryItem('Periode', period),
-                _buildSummaryItem(
-                  'Deskripsi 1',
-                  _description1Controller.text.trim(),
-                ),
-                _buildSummaryItem(
-                  'Deskripsi 2',
-                  _description2Controller.text.trim(),
-                ),
-                _buildSummaryItem(
-                  'Deskripsi 3',
-                  _description3Controller.text.trim(),
-                ),
-                _buildSummaryItem('URL Logo', _thumbnailController.text.trim()),
-                _buildSummaryItem(
-                  'Status',
-                  _isOngoing ? 'Sedang berlangsung' : 'Selesai',
-                ),
-              ],
+    // Prevent duplicate submissions while login or POST is in progress.
+    setState(() => _isSubmitting = true);
+    try {
+      final allowed = await ensureLoggedIn(context);
+      if (!mounted || !allowed) return;
+
+      final auth = context.read<AuthState>();
+      final token = auth.token;
+      if (token == null) return;
+
+      final experience = Organization(
+        title: _titleController.text.trim(),
+        category: _organizationController.text.trim(),
+        desc1: _optionalText(_description1Controller),
+        desc2: _optionalText(_description2Controller),
+        desc3: _optionalText(_description3Controller),
+        thumbnail: _optionalText(_thumbnailController),
+        startedAt: _startedAt?.toUtc(),
+        endedAt: _isOngoing ? null : _endedAt?.toUtc(),
+      );
+
+      final saved = await context.read<ApiClient>().createOrganization(
+        experience,
+        token: token,
+      );
+      if (!mounted) return;
+
+      final period = saved.endedAt == null
+          ? '${_formatDate(saved.startedAt?.toLocal())} - Sekarang'
+          : '${_formatDate(saved.startedAt?.toLocal())} - ${_formatDate(saved.endedAt?.toLocal())}';
+
+      setState(() => _isSubmitting = false);
+
+      // Only show a confirmation after the backend accepts the request.
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.work_history_outlined, color: Colors.indigo),
+              SizedBox(width: 8),
+              Expanded(child: Text('Experience berhasil disimpan')),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSummaryItem('Posisi', saved.title),
+                  _buildSummaryItem('Organisasi', saved.category),
+                  _buildSummaryItem('Periode', period),
+                  _buildSummaryItem('Deskripsi 1', saved.desc1 ?? ''),
+                  _buildSummaryItem('Deskripsi 2', saved.desc2 ?? ''),
+                  _buildSummaryItem('Deskripsi 3', saved.desc3 ?? ''),
+                  _buildSummaryItem('URL Logo', saved.thumbnail ?? ''),
+                  _buildSummaryItem(
+                    'Status',
+                    saved.endedAt == null ? 'Sedang berlangsung' : 'Selesai',
+                  ),
+                ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Tutup'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Tutup'),
+      );
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OrganizationListScreen()),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      if (error.isAuthenticationFailure) {
+        final auth = context.read<AuthState>();
+        try {
+          await auth.logout();
+        } catch (_) {
+          // AuthState clears the local token in finally.
+        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sesi tidak valid. Silakan login ulang.'),
           ),
-        ],
-      ),
-    );
+        );
+      } else {
+        final message = switch (error.statusCode) {
+          403 => 'Hanya pemilik portofolio yang boleh menambahkan pengalaman.',
+          400 => 'Data ditolak server. Periksa kembali isian formulir.',
+          _ => 'Gagal menyimpan pengalaman (${error.statusCode}).',
+        };
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Gagal menyimpan. Periksa koneksi dan data di daftar sebelum mencoba lagi.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -415,9 +488,19 @@ class _ExperienceFormPageState extends State<ExperienceFormPage> {
                     SizedBox(
                       height: 48,
                       child: ElevatedButton.icon(
-                        onPressed: _saveExperience,
-                        icon: const Icon(Icons.save_outlined),
-                        label: const Text('Simpan Experience'),
+                        onPressed: _isSubmitting ? null : _saveExperience,
+                        icon: _isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.save_outlined),
+                        label: Text(
+                          _isSubmitting ? 'Menyimpan...' : 'Simpan Experience',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.indigo,
                           foregroundColor: Colors.white,
@@ -426,8 +509,7 @@ class _ExperienceFormPageState extends State<ExperienceFormPage> {
                     ),
                     const SizedBox(height: 24),
                     const Text(
-                      '* Wajib diisi. Data pada tugas ini ditampilkan dalam '
-                      'dialog dan belum dikirim ke database Django.',
+                      '* Wajib diisi. Data disimpan ke database Django setelah server menerima permintaan. Hanya pemilik portofolio yang dapat menambahkan pengalaman.',
                       style: TextStyle(fontSize: 12, color: Colors.black54),
                     ),
                   ],

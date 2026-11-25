@@ -3,9 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:myportofolio_mobile/main.dart';
 import 'package:myportofolio_mobile/screens/project_form.dart';
 
+import 'support/fake_api_client.dart';
+
 void main() {
   testWidgets('Add Project di drawer membuka halaman form', (tester) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(initialToken: 'test-token'));
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Add Project'));
@@ -16,7 +18,7 @@ void main() {
   });
 
   testWidgets('Tombol hijau Tambah Proyek membuka form', (tester) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(initialToken: 'test-token'));
     await tester.ensureVisible(find.text('Tambah Proyek'));
     await tester.tap(find.text('Tambah Proyek'));
     await tester.pumpAndSettle();
@@ -26,7 +28,7 @@ void main() {
   });
 
   testWidgets('Nama dan deskripsi proyek harus diisi', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: ProjectFormPage()));
+    await tester.pumpWidget(buildTestApp(const ProjectFormPage()));
     await tester.ensureVisible(find.text('Save'));
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
@@ -37,7 +39,7 @@ void main() {
   });
 
   testWidgets('Data yang valid tampil pada dialog konfirmasi', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: ProjectFormPage()));
+    await tester.pumpWidget(buildTestApp(const ProjectFormPage()));
 
     await tester.enterText(find.byType(TextFormField).at(0), 'Proyek Demo');
     await tester.enterText(find.byType(TextFormField).at(1), 'Deskripsi Demo');
